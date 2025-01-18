@@ -6,8 +6,9 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config();
+const path = require('path');
 
-// testing part
+
 const fs = require('fs');
 const uploadDir = 'uploads';
 if (!fs.existsSync(uploadDir)){
@@ -17,7 +18,6 @@ if (!fs.existsSync(uploadDir)){
     console.log('Uploads directory exists');
 } 
 
-// testing part ends here
 
 const app = express();
 
@@ -25,9 +25,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
-// Add this middleware before your routes
 
-//testing
+//Testing
 app.use((req, res, next) => {
     console.log('Incoming request:', {
         method: req.method,
@@ -42,6 +41,7 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/user-subm
     useNewUrlParser: true,
     useUnifiedTopology: true
 });
+
 
 // Configure Multer for file uploads
 const storage = multer.diskStorage({
@@ -124,7 +124,7 @@ app.post('/api/setup-admin', async (req, res) => {
     }
 });
 
-// Admin login route
+// Admin login route 
 app.post('/api/admin/login', async (req, res) => {
     try {
         console.log('Login attempt:', req.body);
@@ -193,76 +193,64 @@ app.get('/api/submissions', authenticateToken, async (req, res) => {
 }); 
 
 // Delete submission (protected route)
+
 app.delete('/api/submissions/:id', authenticateToken, async (req, res) => {
     try {
+        // Validate MongoDB ID
+        if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Invalid submission ID format' 
+            });
+        }
+
         const submission = await UserSubmission.findById(req.params.id);
         
         if (!submission) {
-            return res.status(404).json({ message: 'Submission not found' });
+            return res.status(404).json({ 
+                success: false, 
+                message: 'Submission not found' 
+            });
         }
-  
+
         // Delete associated images
-        submission.images.forEach(imagePath => {
-            const fullPath = path.join(__dirname, imagePath);
-            if (fs.existsSync(fullPath)) {
-                fs.unlinkSync(fullPath);
+        if (submission.images && Array.isArray(submission.images)) {
+            for (const imagePath of submission.images) {
+                try {
+                    const fullPath = path.join(__dirname, imagePath);
+                    // Using synchronous version for simplicity
+                    if (fs.existsSync(fullPath)) {
+                        fs.unlinkSync(fullPath);
+                        console.log('Successfully deleted image:', fullPath);
+                    }
+                } catch (fileError) {
+                    console.warn(`Warning: Failed to delete file: ${imagePath}`, fileError);
+                    // Continue with other deletions even if one fails
+                }
             }
-        });
-  
-        // Delete the submission
+        }
+
+        // Delete the submission from database
         await UserSubmission.findByIdAndDelete(req.params.id);
         
-        res.json({ message: 'Submission deleted successfully' });
+        res.json({ 
+            success: true, 
+            message: 'Submission deleted successfully',
+            id: req.params.id
+        });
+
     } catch (error) {
-        console.error('Error deleting submission:', error);
+        console.error('Error in delete route:', error);
         res.status(500).json({ 
-            message: 'Error deleting submission',
-            error: error.message
+            success: false, 
+            message: 'Error deleting submission', 
+            error: error.message 
         });
     }
 });
 
-// for testing purpose
-app.get('/api/test-admin', async (req, res) => {
-    try {
-        const adminExists = await Admin.findOne({ username: 'admin' });
-        if (!adminExists) {
-            const hashedPassword = await bcrypt.hash('admin123', 10);
-            const admin = new Admin({
-                username: 'admin',
-                password: hashedPassword
-            });
-            await admin.save();
-            res.json({ message: 'Admin created successfully' });
-        } else {
-            res.json({ message: 'Admin already exists' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.get('/api/test-auth', authenticateToken, (req, res) => {
-    res.json({ message: 'Authentication successful', user: req.user });
-});
-app.get('/api/test', (req, res) => {
-    console.log('Test route hit!');
-    res.json({ message: 'Server is working!' });
-});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
-});
-
-app.post('/api/test-upload', upload.array('images', 5), (req, res) => {
-    console.log('Test upload route accessed');
-    console.log('Files received:', req.files);
-    console.log('Form data received:', req.body);
-    
-    res.json({ 
-        message: 'Test upload successful',
-        files: req.files,
-        formData: req.body
-    });
 });

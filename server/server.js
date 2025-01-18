@@ -109,6 +109,13 @@ const authenticateToken = (req, res, next) => {
 
 // Routes
 
+
+
+// Testing
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok' });
+  });
+
 // Create initial admin user route 
 app.post('/api/setup-admin', async (req, res) => {
     try {

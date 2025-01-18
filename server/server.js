@@ -1,4 +1,3 @@
-// server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const multer = require('multer');
@@ -22,7 +21,11 @@ if (!fs.existsSync(uploadDir)){
 const app = express();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: ['http://localhost:3000', 'https://social-media-fs.vercel.app/'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    credentials: true
+  }));
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
@@ -36,6 +39,13 @@ app.use((req, res, next) => {
     });
     next();
 });
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ 
+      message: 'Something went wrong!',
+      error: err.message 
+    });
+  });
 
 mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/user-submissions', {
     useNewUrlParser: true,

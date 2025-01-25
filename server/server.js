@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://social-media-fs-trhn.vercel.app'],
+    origin: ['http://localhost:3000', 'https://social-media-fs-trhn.vercel.app/'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   }));

@@ -22,7 +22,7 @@ const app = express();
 
 // Middleware
 app.use(cors({
-    origin: ['http://localhost:3000', 'https://social-media-fs.vercel.app/'],
+    origin: ['http://localhost:3000', 'https://social-media-fs-trhn.vercel.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   }));
@@ -89,6 +89,8 @@ const adminSchema = new mongoose.Schema({
 const UserSubmission = mongoose.model('UserSubmission', userSubmissionSchema);
 const Admin = mongoose.model('Admin', adminSchema);
 
+
+
 // Middleware for JWT authentication
 const authenticateToken = (req, res, next) => {
     const authHeader = req.headers['authorization'];
@@ -96,7 +98,7 @@ const authenticateToken = (req, res, next) => {
 
     if (!token) {
         return res.status(401).json({ message: 'Authentication required' });
-    }
+    } 
 
     jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key', (err, user) => {
         if (err) {
@@ -105,10 +107,9 @@ const authenticateToken = (req, res, next) => {
         req.user = user;
         next();
     });
-};
+}; 
 
 // Routes
-
 
 
 // Testing
@@ -127,7 +128,7 @@ app.post('/api/setup-admin', async (req, res) => {
             return res.status(400).json({ message: 'Admin already exists' });
         }
 
-        // Create new admin
+        // Create new admin 
         const hashedPassword = await bcrypt.hash('admin123', 10);
         const admin = new Admin({
             username: 'admin',

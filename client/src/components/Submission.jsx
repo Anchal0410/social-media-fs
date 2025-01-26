@@ -32,10 +32,13 @@ const SubmissionForm = () => {
     });
 
     try {
-      const response = await fetch("http://localhost:5000/api/submit", {
-        method: "POST",
-        body: form,
-      });
+      const response = await fetch(
+        "https://social-media-fs.onrender.com/api/submit",
+        {
+          method: "POST",
+          body: form,
+        }
+      );
       const data = await response.json();
 
       if (response.ok) {

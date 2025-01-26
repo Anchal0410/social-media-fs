@@ -8,6 +8,7 @@ const AdminDashboard = ({ onLogout }) => {
   useEffect(() => {
     fetchSubmissions();
   }, []);
+
   const API_URL = "https://social-media-fs.onrender.com";
   const fetchSubmissions = async () => {
     try {

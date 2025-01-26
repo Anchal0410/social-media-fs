@@ -6,10 +6,12 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config();
 const path = require('path');
-
-
+const app = express();
 const fs = require('fs');
 const uploadDir = 'uploads';
+
+
+
 if (!fs.existsSync(uploadDir)){
     fs.mkdirSync(uploadDir);
     console.log('Created uploads directory');
@@ -22,12 +24,10 @@ const corsOptions = {
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
-    preflightContinue: true,
     optionsSuccessStatus: 204
 };
 app.use(cors(corsOptions));
 
-const app = express();
 app.use((req, res, next) => {
     res.header('Access-Control-Allow-Origin', 'https://social-media-fs-trhn.vercel.app');
     res.header('Access-Control-Allow-Credentials', 'true');
@@ -40,6 +40,8 @@ app.use((req, res, next) => {
     }
     next();
 });
+app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -56,8 +58,7 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     credentials: true
   }));
-app.use(express.json());
-app.use('/uploads', express.static('uploads'));
+
 
 //Testing
 app.use((req, res, next) => {
@@ -69,6 +70,7 @@ app.use((req, res, next) => {
     });
     next();
 });
+
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).json({ 
@@ -147,6 +149,14 @@ app.get('/', (req, res) => {
     res.json({ message: 'Server is running' });
   });
 
+
+app.get('/health', (req, res) => {
+    res.json({ 
+        status: 'ok',
+        timestamp: new Date(),
+        mongodb: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+});
   
 // Create initial admin user route 
 app.post('/api/setup-admin', async (req, res) => {

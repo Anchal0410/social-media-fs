@@ -8,11 +8,11 @@ const AdminDashboard = ({ onLogout }) => {
   useEffect(() => {
     fetchSubmissions();
   }, []);
-
+  const API_URL = "https://social-media-fs.onrender.com";
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
-      const response = await fetch("http://localhost:5000/api/submissions", {
+      const response = await fetch(`${API_URL}/api/submissions`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
         },
@@ -41,15 +41,12 @@ const AdminDashboard = ({ onLogout }) => {
   const handleDelete = async (id) => {
     if (window.confirm("Are you sure you want to delete this submission?")) {
       try {
-        const response = await fetch(
-          `http://localhost:5000/api/submissions/${id}`,
-          {
-            method: "DELETE",
-            headers: {
-              Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-            },
-          }
-        );
+        const response = await fetch(`${API_URL}/api/submissions/${id}`, {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+          },
+        });
 
         if (response.ok) {
           // Update state directly instead of refetching
@@ -139,14 +136,14 @@ const AdminDashboard = ({ onLogout }) => {
                     {submission.images.map((img, imgIdx) => (
                       <div key={imgIdx} className="relative group">
                         <img
-                          src={`http://localhost:5000/${img}`}
+                          src={`${API_URL}/${img}`}
                           alt={`${submission.name}'s image ${imgIdx + 1}`}
                           className="w-full h-32 object-cover rounded-lg"
                           onError={handleImageError}
                         />
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-300 rounded-lg">
                           <a
-                            href={`http://localhost:5000/${img}`}
+                            href={`${API_URL}/${img}`}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 text-white"

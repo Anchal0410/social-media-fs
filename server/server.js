@@ -17,9 +17,39 @@ if (!fs.existsSync(uploadDir)){
     console.log('Uploads directory exists');
 } 
 
+const corsOptions = {
+    origin: 'https://social-media-fs-trhn.vercel.app',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+    preflightContinue: true,
+    optionsSuccessStatus: 204
+};
+app.use(cors(corsOptions));
 
 const app = express();
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', 'https://social-media-fs-trhn.vercel.app');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
 
+    // Handle preflight
+    if (req.method === 'OPTIONS') {
+        return res.status(204).end();
+    }
+    next();
+});
+
+// Error handling middleware
+app.use((err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({
+        success: false,
+        message: 'Internal Server Error',
+        error: err.message
+    });
+});
 // Middleware
 app.use(cors({
     origin: ['http://localhost:3000', 'https://social-media-fs-trhn.vercel.app'],
@@ -146,15 +176,29 @@ app.post('/api/setup-admin', async (req, res) => {
 // Admin login route 
 app.post('/api/admin/login', async (req, res) => {
     try {
-        console.log('Login attempt:', req.body);
+        console.log('Login attempt received:', {
+            body: req.body,
+            headers: req.headers
+        });
+
         const { username, password } = req.body;
+
+        if (!username || !password) {
+            return res.status(400).json({
+                success: false,
+                message: 'Username and password are required'
+            });
+        }
 
         // Find admin user
         const admin = await Admin.findOne({ username });
         
         if (!admin) {
             console.log('Admin not found');
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
         }
 
         // Check password
@@ -162,7 +206,10 @@ app.post('/api/admin/login', async (req, res) => {
         
         if (!isValidPassword) {
             console.log('Invalid password');
-            return res.status(401).json({ message: 'Invalid credentials' });
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid credentials'
+            });
         }
 
         // Generate JWT token
@@ -172,10 +219,22 @@ app.post('/api/admin/login', async (req, res) => {
             { expiresIn: '24h' }
         );
 
-        res.json({ token });
+        // Set CORS headers explicitly for this response
+        res.header('Access-Control-Allow-Origin', 'https://social-media-fs-trhn.vercel.app');
+        res.header('Access-Control-Allow-Credentials', 'true');
+
+        res.json({
+            success: true,
+            token,
+            message: 'Login successful'
+        });
     } catch (error) {
         console.error('Login error:', error);
-        res.status(500).json({ message: 'Error during login' });
+        res.status(500).json({
+            success: false,
+            message: 'Error during login',
+            error: error.message
+        });
     }
 });
 
@@ -273,3 +332,6 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
 });
+
+
+

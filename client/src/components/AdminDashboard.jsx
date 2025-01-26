@@ -4,34 +4,38 @@ const AdminDashboard = ({ onLogout }) => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState(null); // Track which item is being deleted
+
+  const API_URL = "https://social-media-fs.onrender.com";
 
   useEffect(() => {
     fetchSubmissions();
   }, []);
 
-  const API_URL = "https://social-media-fs.onrender.com";
   const fetchSubmissions = async () => {
     try {
       setLoading(true);
+      setError("");
+
       const response = await fetch(`${API_URL}/api/submissions`, {
         headers: {
           Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
         },
+        credentials: "include", // Add this for CORS
       });
 
       if (!response.ok) {
-        throw new Error("Failed to fetch submissions");
+        const data = await response.json();
+        throw new Error(data.message || "Failed to fetch submissions");
       }
 
       const data = await response.json();
       console.log("Fetched submissions:", data);
       setSubmissions(data);
-      setError("");
     } catch (error) {
       console.error("Fetch error:", error);
-      setError("Failed to load submissions");
+      setError(error.message || "Failed to load submissions");
       if (error.message.includes("token")) {
-        // If token is invalid, logout
         onLogout();
       }
     } finally {
@@ -40,25 +44,31 @@ const AdminDashboard = ({ onLogout }) => {
   };
 
   const handleDelete = async (id) => {
-    if (window.confirm("Are you sure you want to delete this submission?")) {
-      try {
-        const response = await fetch(`${API_URL}/api/submissions/${id}`, {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
-          },
-        });
+    if (!window.confirm("Are you sure you want to delete this submission?")) {
+      return;
+    }
 
-        if (response.ok) {
-          // Update state directly instead of refetching
-          setSubmissions((prev) => prev.filter((sub) => sub._id !== id));
-        } else {
-          throw new Error("Failed to delete submission");
-        }
-      } catch (error) {
-        console.error("Delete error:", error);
-        alert("Failed to delete submission");
+    try {
+      setDeleteLoading(id);
+      const response = await fetch(`${API_URL}/api/submissions/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("adminToken")}`,
+        },
+        credentials: "include", // Add this for CORS
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to delete submission");
       }
+
+      setSubmissions((prev) => prev.filter((sub) => sub._id !== id));
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert(error.message || "Failed to delete submission");
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -74,24 +84,21 @@ const AdminDashboard = ({ onLogout }) => {
     );
   }
 
-  if (error) {
-    return (
-      <div className="max-w-7xl mx-auto p-4">
-        <div className="bg-red-50 text-red-800 p-4 rounded-lg">{error}</div>
-      </div>
-    );
-  }
-
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-7xl mx-auto p-4">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-gray-800">Admin Dashboard</h2>
         <div className="flex space-x-4">
           <button
             onClick={fetchSubmissions}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg transition-colors ${
+              loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
+            }`}
           >
-            Refresh Data
+            {loading ? "Refreshing..." : "Refresh Data"}
           </button>
           <button
             onClick={onLogout}
@@ -101,6 +108,12 @@ const AdminDashboard = ({ onLogout }) => {
           </button>
         </div>
       </div>
+
+      {error && (
+        <div className="mb-6 p-4 bg-red-50 text-red-800 rounded-lg">
+          {error}
+        </div>
+      )}
 
       {submissions.length === 0 ? (
         <div className="bg-gray-50 text-gray-600 p-8 rounded-lg text-center">
@@ -117,7 +130,7 @@ const AdminDashboard = ({ onLogout }) => {
                 {/* User Info */}
                 <div className="flex items-center space-x-4 mb-4">
                   <div className="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold">
-                    {submission.name[0].toUpperCase()}
+                    {submission.name?.[0]?.toUpperCase() || "?"}
                   </div>
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-800">
@@ -164,9 +177,16 @@ const AdminDashboard = ({ onLogout }) => {
                 {/* Actions */}
                 <button
                   onClick={() => handleDelete(submission._id)}
-                  className="w-full bg-red-500 text-white py-2 px-4 rounded-lg hover:bg-red-600 transition-colors"
+                  disabled={deleteLoading === submission._id}
+                  className={`w-full py-2 px-4 rounded-lg transition-colors ${
+                    deleteLoading === submission._id
+                      ? "bg-gray-400 cursor-not-allowed"
+                      : "bg-red-500 hover:bg-red-600 text-white"
+                  }`}
                 >
-                  Delete Submission
+                  {deleteLoading === submission._id
+                    ? "Deleting..."
+                    : "Delete Submission"}
                 </button>
               </div>
             </div>

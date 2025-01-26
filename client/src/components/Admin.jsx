@@ -1,8 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AdminDashboard from "./AdminDashboard";
 
 const Admin = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  // Check for existing token on mount
+  useEffect(() => {
+    const token = localStorage.getItem("adminToken");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("adminToken");
@@ -31,34 +39,47 @@ const AdminLogin = ({ onLogin }) => {
     setError("");
 
     try {
+      // Validate input
+      if (!credentials.username.trim() || !credentials.password.trim()) {
+        throw new Error("Username and password are required");
+      }
+
       const response = await fetch(
         "https://social-media-fs.onrender.com/api/admin/login",
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
+            Accept: "application/json",
           },
-          body: JSON.stringify(credentials),
+          credentials: "include", // Add this for CORS
+          body: JSON.stringify({
+            username: credentials.username.trim(),
+            password: credentials.password.trim(),
+          }),
         }
       );
 
       const data = await response.json();
+      console.log("Login response:", data); // For debugging
 
       if (response.ok && data.token) {
         localStorage.setItem("adminToken", data.token);
+        setCredentials({ username: "", password: "" }); // Clear credentials
         onLogin();
       } else {
-        setError(data.message || "Invalid credentials");
+        throw new Error(data.message || "Invalid credentials");
       }
     } catch (error) {
-      setError("Login failed. Please try again.");
+      console.error("Login error:", error);
+      setError(error.message || "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="max-w-md mx-auto bg-white rounded-lg shadow-md">
+    <div className="max-w-md mx-auto mt-10 bg-white rounded-lg shadow-md">
       <div className="p-6">
         <h2 className="text-2xl font-bold mb-6 text-gray-800">Admin Login</h2>
         <form onSubmit={handleLogin} className="space-y-6">
@@ -77,6 +98,8 @@ const AdminLogin = ({ onLogin }) => {
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
+              disabled={loading}
+              autoComplete="username"
             />
           </div>
 
@@ -95,6 +118,8 @@ const AdminLogin = ({ onLogin }) => {
               }
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
+              disabled={loading}
+              autoComplete="current-password"
             />
           </div>
 
